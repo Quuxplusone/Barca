@@ -2,6 +2,7 @@
 #ifndef H_BOARD
  #define H_BOARD
 
+#include <string>
 #include <vector>
 
 enum Player {
@@ -36,6 +37,7 @@ struct Move {
 
     Move() { }
     Move(const Piece &p, int x, int y);
+    std::string str() const;
 };
 
 struct Board {
@@ -48,16 +50,19 @@ struct Board {
     Board();
 
     bool is_occupied(int x, int y) const;
-    void print() const;
+    void update_scaredness();
 
     std::vector<Move> find_all_moves() const;
     Move find_best_move() const;
+    Move find_random_move() const;
     void apply_move(const Move &);
     int score() const;
+    std::string str() const;
 
   private:
     void maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, int y) const;
-    void update_scaredness();
+    bool clear_line_to(const Piece &p, int ax, int ay) const;
+    int waterholes_threatened_by(const Piece &p) const;
 };
 
 #endif /* H_BOARD */

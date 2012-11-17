@@ -1,1 +1,35 @@
-"Barca" AI, initial commit.
+
+This is a bot to play the abstract strategy game of "Barca" via the Flash
+interface on http://playbarca.com/?page_id=250.
+
+This program is based on a bot I wrote a few years ago to get high scores
+in the single-player Flash game "Jorinapeka". I've rewritten major chunks
+of it to do an alpha-beta search of the game space for the two-player
+Flash game "Barca" (playbarca.com/?page_id=250).
+    
+This program will work only on a system with BOTH of the following
+programs installed and on your path:
+    
+    (1) xdotool, for generating clicks programmatically
+    
+    (2) Either ImageMagick "import" (Linux) or
+        Apple "screencapture" (OS X)
+    
+Also, you'll need libpng (sudo apt-get libpng-dev) in order to
+compile it. Since both libpng and xdotool are hard-to-impossible
+to install on OS X, I'm developing on Ubuntu Linux (11.10, 64-bit).
+
+To run the bot, open a browser window to playbarca.com/?page_id=250
+(you'll need Flash installed), and then launch "barca" in a separate
+terminal window. "barca" will use ImageMagick to screenshot the Flash
+game to a PNG file in /tmp; read in that PNG file and compute the
+proper move; and then use xdotool to generate the appropriate click
+events. It will do this in a loop every second or two until somebody
+wins the game or you kill it.
+
+You can use this to play against the playbarca.com AI, or (this is
+not implemented yet) to play against yourself by changing the black
+player from "robot" to "human" control.
+
+This bot is not endorsed by playbarca.com nor SparkWorkz.
+For entertainment purposes only.

@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 #include <algorithm>
+#include <string>
 #include <vector>
 #include "AlphaBeta.hh"
 #include "Board.h"
@@ -80,30 +82,20 @@ Move::Move(const Piece &p, int x, int y):
 
 void Board::maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, int y) const
 {
-    /* Can't move to an occupied space. */
-    if (is_occupied(x,y)) return;
-    
     const Piece (&defenders_pieces)[6] = (attacker == ME) ? your_pieces : my_pieces;
 
-    /* Can't move to a place where you're scared. */
+    /* Can't move to a place where you're scared,
+     * nor to an occupied space. */
     for (int i=0; i < 6; ++i) {
+        if (my_pieces[i].at(x,y)) return;
+        if (your_pieces[i].at(x,y)) return;
         if (defenders_pieces[i].scares(p) && defenders_pieces[i].is_adjacent(x,y))
             return;
     }
 
-    Move m(p, x, y);
-    int dx = (m.from_x - m.to_x);
-    int dy = (m.from_y - m.to_y);
-    if ((dx == 0 || dy == 0) && p.type != LION) {
-        /* Rook-like move is okay. */
-    } else if ((dx == dy || dx == -dy) && p.type != MOUSE) {
-        /* Bishop-like move is okay. */
-    } else {
-        /* The move is impossible. */
-        return;
+    if (clear_line_to(p, x,y)) {
+        moves.push_back(Move(p, x,y));
     }
-    
-    moves.push_back(m);
 }
     
 
@@ -113,6 +105,12 @@ std::vector<Move> Board::find_all_moves() const
     const Piece (&defenders_pieces)[6] = (attacker == ME) ? your_pieces : my_pieces;
 
     std::vector<Move> moves;
+
+    if (this->score() == +9999) {
+        /* The current defender has just won the game. */
+        return moves;
+    }
+
     for (int x=0; x < 10; ++x) {
         for (int y=0; y < 10; ++y) {
             for (int i=0; i < 6; ++i) {
@@ -182,43 +180,120 @@ void Board::apply_move(const Move &move)
     assert(false);
 }
 
+bool Board::clear_line_to(const Piece &p, int to_x, int to_y) const
+{
+    if (p.at(to_x, to_y)) return false;
+    int dx = (to_x - p.x);
+    int dy = (to_y - p.y);
+    if ((dx == 0 || dy == 0) && p.type != LION) {
+        /* Rook-like move is okay. */
+    } else if ((dx == dy || dx == -dy) && p.type != MOUSE) {
+        /* Bishop-like move is okay. */
+    } else {
+        /* The move is impossible. */
+        return false;
+    }
+
+    /* Can't move through an occupied space. */
+    int ox = p.x;
+    int oy = p.y;
+    while (true) {
+        ox += (dx > 0) - (dx < 0);
+        oy += (dy > 0) - (dy < 0);
+        if (ox == to_x && oy == to_y) break;
+        if (is_occupied(ox, oy)) return false;
+    }
+    return true;
+}
+
+int Board::waterholes_threatened_by(const Piece &p) const
+{
+    return clear_line_to(p, 3,3) + clear_line_to(p, 3,6) +
+           clear_line_to(p, 6,3) + clear_line_to(p, 6,6);
+}
+
 /* Return the board's value to the defender.
  * Higher is better for the defender. */
 int Board::score() const
 {
-    int my_score = 0;
-    int your_score = 0;
+    int my_score = 0, your_score = 0;
+    int my_scared = 0, your_scared = 0;
+    int my_threats = 0, your_threats = 0;
     for (int i=0; i < 6; ++i) {
         my_score += my_pieces[i].at(3,3); your_score += your_pieces[i].at(3,3);
         my_score += my_pieces[i].at(3,6); your_score += your_pieces[i].at(3,6);
         my_score += my_pieces[i].at(6,3); your_score += your_pieces[i].at(6,3);
         my_score += my_pieces[i].at(6,6); your_score += your_pieces[i].at(6,6);
+        my_scared += my_pieces[i].is_scared;
+        your_scared += your_pieces[i].is_scared;
+        my_threats += waterholes_threatened_by(my_pieces[i]);
+        your_threats += waterholes_threatened_by(your_pieces[i]);
     }
     assert(my_score + your_score <= 4);
     assert(my_score <= 3);
     assert(your_score <= 3);
+    
+    if (my_score == 3) { assert(attacker == YOU); return +9999; }
+    if (your_score == 3) { assert(attacker == ME); return +9999; }
 
-    int my_advantage =
-        (my_score == 3) ? +9999 :
-        (your_score == 3) ? -9999 :
-        (my_score - your_score);
+    my_score = 10*my_score + my_threats + your_scared;
+    your_score = 10*your_score + your_threats + my_scared;
 
+    int my_advantage = (my_score - your_score);
+    
     return (attacker == ME) ? -my_advantage : +my_advantage;
+}
+
+static int usec_difference(struct timeval a, struct timeval b)
+{
+    return (b.tv_sec - a.tv_sec) * 1000 * 1000 + ((int)b.tv_usec - (int)a.tv_usec);
 }
 
 Move Board::find_best_move() const
 {
-    Move move;
-    int value;
-    const int ply = 4;  /* how many plies deep to search */
+    Move bestmove;
+    int bestvalue;
+    int ply = 1;  /* how many plies deep to search */
+    std::vector<Move> all_moves = this->find_all_moves();
+    printf("Found %d moves\n", (int)all_moves.size());
 
-    ab.depth_first_alpha_beta(*this, ply, move, value, /*alpha=*/-9999, /*beta=*/+9999);
-    return move;
+    /* Spend up to 2 seconds searching. */
+    struct timeval start;
+    gettimeofday(&start, NULL);
+    struct timeval last_iter = start;
+    
+    for (int ply = 1; ply <= 7; ++ply) {
+        if (ply == 2) continue;
+
+        /* Expect the search at level N to take 30 times as long
+         * as the search took at level N-1. */
+        struct timeval current;
+        gettimeofday(&current, NULL);
+        int estimated_completion =
+            usec_difference(start, current) +
+            30*usec_difference(last_iter, current);
+        if (estimated_completion > 2*1000*1000) {
+            printf("Breaking off search after ply=%d.\n", ply);
+            break;
+        }
+
+        ab.depth_first_alpha_beta(*this, ply, bestmove, bestvalue,
+                                  /*alpha=*/-9999, /*beta=*/+9999);
+        if (bestvalue == +9999) break;
+    }
+    return bestmove;
 }
 
-static char piece2char(Player who, Species type)
+Move Board::find_random_move() const
 {
-    switch (type)
+    std::vector<Move> all_moves = this->find_all_moves();
+    return all_moves[rand() % all_moves.size()];
+}
+
+static char piece2char(Player who, const Piece &p)
+{
+    if (p.is_scared) return '!';
+    switch (p.type)
     {
         case MOUSE: return (who == ME ? 'M' : 'm');
         case LION: return (who == ME ? 'L' : 'l');
@@ -227,18 +302,21 @@ static char piece2char(Player who, Species type)
     }
 }
 
-void Board::print() const
+std::string Board::str() const
 {
     char board[10][10];
     memset(board, '.', sizeof board);
     for (int i=0; i < 6; ++i) {
-        board[my_pieces[i].x][my_pieces[i].y] = piece2char(ME, my_pieces[i].type);
-        board[your_pieces[i].x][your_pieces[i].y] = piece2char(YOU, your_pieces[i].type);
+        board[my_pieces[i].x][my_pieces[i].y] = piece2char(ME, my_pieces[i]);
+        board[your_pieces[i].x][your_pieces[i].y] = piece2char(YOU, your_pieces[i]);
     }
+
+    std::string result;
     for (int y=0; y < 10; ++y) {
         for (int x=0; x < 10; ++x) {
-            printf("%c", board[x][y]);
+            result += board[x][y];
         }
-        printf("\n");
+        result += "\n";
     }
+    return result;
 }

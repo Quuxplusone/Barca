@@ -103,14 +103,13 @@ static bool has_colored_circle(unsigned char (*im)[3], int w, int h,
                         int x, int y, unsigned int color_)
 {
     unsigned char color[3] = { color_>>16, color_>>8, color_ };
+    int count = 0;
     for (int j=y; j < y+47; ++j) {
         for (int i=x; i < x+47; ++i) {
-            if (memcmp(im[j*w+i], color, 3) == 0) {
-                return true;
-            }
+            count += (memcmp(im[j*w+i], color, 3) == 0);
         }
     }
-    return false;
+    return (count > 50);
 }
 
 static int square_weight(unsigned char (*im)[3], int w, int h,
@@ -120,10 +119,12 @@ static int square_weight(unsigned char (*im)[3], int w, int h,
     unsigned char light[3] = { 0xFF, 0xFF, 0xCC };
     unsigned char blue[3] = { 0x27, 0x27, 0x8F };
     unsigned char white[3] = { 0xFF, 0xFF, 0xFF };
+    unsigned char crown_orange[3] = { 0xFF, 0x99, 0x00 };
+    unsigned char crown_yellow[3] = { 0xFF, 0xCC, 0x00 };
     int darks = 0;
     int lights = 0;
-    for (int j=y; j < y+47; ++j) {
-        for (int i=x; i < x+16; ++i) {
+    for (int j=y+18; j < y+39; ++j) {
+        for (int i=x; i < x+20; ++i) {
             assert(0 < j && j < h);
             assert(0 < i && i < w);
             darks += (memcmp(im[j*w+i], dark, 3) == 0);
@@ -132,6 +133,43 @@ static int square_weight(unsigned char (*im)[3], int w, int h,
     }
     return 16*(darks/4) + (lights/4);
 }
+
+static bool square_crowned(unsigned char (*im)[3], int w, int h,
+                           int x, int y)
+{
+    unsigned char crown_orange[3] = { 0xFF, 0x99, 0x00 };
+    unsigned char crown_yellow[3] = { 0xFF, 0xCC, 0x00 };
+    int oranges = 0;
+    for (int j=y; j < y+23; ++j) {
+        for (int i=x; i < x+47; ++i) {
+            assert(0 < j && j < h);
+            assert(0 < i && i < w);
+            oranges += (memcmp(im[j*w+i], crown_orange, 3) == 0);
+        }
+    }
+    return (oranges > 100);  /* should be 160 */
+}
+
+static bool board_has_crowns(unsigned char (*im)[3], int w, int h,
+                             Board &board)
+{
+    for (int x=3; x <= 6; x += 3) {
+        for (int y=3; y <= 6; y += 3) {
+            const int sx = board.left+47*x - 47/2;
+            const int sy = board.top+47*y - 47/2;
+            
+            int weight = square_weight(im,w,h, sx,sy);
+            if (weight == 0) continue;
+
+            if (square_crowned(im,w,h, sx,sy)) {
+                board.attacker = (weight < 500) ? YOU : ME;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 Board process_image(unsigned char (*im)[3], int w, int h)
 {
@@ -171,8 +209,8 @@ Board process_image(unsigned char (*im)[3], int w, int h)
           squares.push_back(&pr);
     }
     printf("number of squares: %d\n", (int)squares.size());
-    if (squares.size() < 60) { 
-        printf("The screenshot doesn't have enough squares! (%d<100-12-4)\n",
+    if (squares.size() < 50) { 
+        printf("The screenshot doesn't have enough squares! (%d<50)\n",
                 (int)squares.size());
         printf("Try again.\n");
         throw "try again";
@@ -197,6 +235,7 @@ Board process_image(unsigned char (*im)[3], int w, int h)
     /* Identify the positions of all the pieces. */
     int mine_found = 0;
     int yours_found = 0;
+    bool found_attacker = false;
     for (int x=0; x < 10; ++x) {
         for (int y=0; y < 10; ++y) {
             const int sx = board.left+47*x - 47/2;
@@ -204,20 +243,23 @@ Board process_image(unsigned char (*im)[3], int w, int h)
             Player dummy_att;
             Player *att = &dummy_att;
             if (has_colored_circle(im,w,h, sx,sy, 0x00CC00)) {
+                printf("Found green circle at square %d,%d\n", x,y);
                 att = &board.attacker;
+                found_attacker = true;
             } else if (has_colored_circle(im,w,h, sx,sy, 0xFF3300)) {
+                printf("Found red circle at square %d,%d\n", x,y);
                 /* If we're not expected to make a move, just bail and sleep. */
                 throw "it's the Flash AI's turn";
             }
             switch (int weight = square_weight(im,w,h, sx,sy)) {
-                case 178: board.my_pieces[mine_found++] = Piece(LION, x,y); *att = ME; break;
-                case 296: board.my_pieces[mine_found++] = Piece(ELEPHANT, x,y); *att = ME; break;
-                case 143: board.my_pieces[mine_found++] = Piece(MOUSE, x,y); *att = ME; break;
-                case 1063: board.my_pieces[yours_found++] = Piece(LION, x,y); *att = YOU; break;
-                case 911: board.my_pieces[yours_found++] = Piece(ELEPHANT, x,y); *att = YOU; break;
-                case 1268: board.my_pieces[yours_found++] = Piece(MOUSE, x,y); *att = YOU; break;
+                case 240: board.my_pieces[mine_found++] = Piece(LION, x,y); *att = ME; break;
+                case 359 ... 375: board.my_pieces[mine_found++] = Piece(ELEPHANT, x,y); *att = ME; break;
+                case 219 ... 235: board.my_pieces[mine_found++] = Piece(MOUSE, x,y); *att = ME; break;
+                case 780: board.your_pieces[yours_found++] = Piece(LION, x,y); *att = YOU; break;
+                case 644 ... 645: board.your_pieces[yours_found++] = Piece(ELEPHANT, x,y); *att = YOU; break;
+                case 953: board.your_pieces[yours_found++] = Piece(MOUSE, x,y); *att = YOU; break;
                 case 0: /* empty square */ break;
-                default: printf("Unrecognized weight %d, might be a mouse cursor\n", weight); break;
+                default: printf("Unrecognized weight %d at (%d,%d), might be a mouse cursor\n", weight, x,y); break;
             }
         }
     }
@@ -225,11 +267,15 @@ Board process_image(unsigned char (*im)[3], int w, int h)
         throw "Found fewer than 6 of my (white) pieces";
     } else if (yours_found != 6) {
         throw "Found fewer than 6 of your (black) pieces";
-    } else if (board.attacker != ME && board.attacker != YOU) {
-        /* This happens when pieces are in transit. Of course the odds are that
-         * we'll already have failed to find squares or pieces by now, but just
-         * in case, we'll bail here. */
-        throw "Neither side seems to be the attacker";
+    }
+    board.update_scaredness();
+    if (!found_attacker) {
+        /* This happens when pieces are in transit, or at the end of the game. */
+        if (board_has_crowns(im,w,h, board)) {
+            /* One side or the other was crowned. */
+        } else {
+            throw "Neither side seems to be the attacker yet";
+        }
     }
 
     return board;
