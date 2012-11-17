@@ -65,6 +65,11 @@ int main()
 
         if (board.score() == +9999) {
             /* Somebody won. */
+            if (turns == 0) {
+                /* The board just hasn't been cleared since last time. */
+                usleep(500*1000);
+                continue;
+            }
             FILE *fp = fopen("/tmp/barca.log", "a");
             if (board.attacker == ME) {
                 puts("I lost!");
@@ -89,7 +94,7 @@ int main()
 
         if (board.attacker != ME) {
             puts("Attacker is not ME, so I'm going back to sleep for a while.");
-            usleep(1000*1000);
+            usleep(500*1000);
             continue;
         }
 

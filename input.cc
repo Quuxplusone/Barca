@@ -254,7 +254,7 @@ Board process_image(unsigned char (*im)[3], int w, int h)
             switch (int weight = square_weight(im,w,h, sx,sy)) {
                 case 240: board.my_pieces[mine_found++] = Piece(LION, x,y); *att = ME; break;
                 case 359 ... 375: board.my_pieces[mine_found++] = Piece(ELEPHANT, x,y); *att = ME; break;
-                case 219 ... 235: board.my_pieces[mine_found++] = Piece(MOUSE, x,y); *att = ME; break;
+                case 215 ... 235: board.my_pieces[mine_found++] = Piece(MOUSE, x,y); *att = ME; break;
                 case 780: board.your_pieces[yours_found++] = Piece(LION, x,y); *att = YOU; break;
                 case 644 ... 645: board.your_pieces[yours_found++] = Piece(ELEPHANT, x,y); *att = YOU; break;
                 case 953: board.your_pieces[yours_found++] = Piece(MOUSE, x,y); *att = YOU; break;
