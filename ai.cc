@@ -34,28 +34,28 @@ Board::Board()
 {
     /* Assume that the human player takes South, and moves first. */
 
-    attacker = YOU;
+    attacker = BLACK;
 
-    my_pieces[0] = Piece(ELEPHANT, 4,0);
-    my_pieces[1] = Piece(ELEPHANT, 5,0);
-    my_pieces[2] = Piece(LION, 3,1);
-    my_pieces[3] = Piece(MOUSE, 4,1);
-    my_pieces[4] = Piece(MOUSE, 5,1);
-    my_pieces[5] = Piece(LION, 6,1);
+    white_pieces[0] = Piece(ELEPHANT, 4,0);
+    white_pieces[1] = Piece(ELEPHANT, 5,0);
+    white_pieces[2] = Piece(LION, 3,1);
+    white_pieces[3] = Piece(MOUSE, 4,1);
+    white_pieces[4] = Piece(MOUSE, 5,1);
+    white_pieces[5] = Piece(LION, 6,1);
 
-    your_pieces[0] = Piece(ELEPHANT, 4,9);
-    your_pieces[1] = Piece(ELEPHANT, 5,9);
-    your_pieces[2] = Piece(LION, 3,8);
-    your_pieces[3] = Piece(MOUSE, 4,8);
-    your_pieces[4] = Piece(MOUSE, 5,8);
-    your_pieces[5] = Piece(LION, 6,8);
+    black_pieces[0] = Piece(ELEPHANT, 4,9);
+    black_pieces[1] = Piece(ELEPHANT, 5,9);
+    black_pieces[2] = Piece(LION, 3,8);
+    black_pieces[3] = Piece(MOUSE, 4,8);
+    black_pieces[4] = Piece(MOUSE, 5,8);
+    black_pieces[5] = Piece(LION, 6,8);
 }
 
 bool Board::is_occupied(int x, int y) const
 {
     for (int i=0; i < 6; ++i) {
-        if (your_pieces[i].x == x && your_pieces[i].y == y) return true;
-        if (my_pieces[i].x == x && my_pieces[i].y == y) return true;
+        if (black_pieces[i].x == x && black_pieces[i].y == y) return true;
+        if (white_pieces[i].x == x && white_pieces[i].y == y) return true;
     }
     return false;
 }
@@ -82,13 +82,13 @@ Move::Move(const Piece &p, int x, int y):
 
 void Board::maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, int y) const
 {
-    const Piece (&defenders_pieces)[6] = (attacker == ME) ? your_pieces : my_pieces;
+    const Piece (&defenders_pieces)[6] = (attacker == WHITE) ? black_pieces : white_pieces;
 
     /* Can't move to a place where you're scared,
      * nor to an occupied space. */
     for (int i=0; i < 6; ++i) {
-        if (my_pieces[i].at(x,y)) return;
-        if (your_pieces[i].at(x,y)) return;
+        if (white_pieces[i].at(x,y)) return;
+        if (black_pieces[i].at(x,y)) return;
         if (defenders_pieces[i].scares(p) && defenders_pieces[i].is_adjacent(x,y))
             return;
     }
@@ -101,8 +101,8 @@ void Board::maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, i
 
 std::vector<Move> Board::find_all_moves() const
 {
-    const Piece (&attackers_pieces)[6] = (attacker == ME) ? my_pieces : your_pieces;
-    const Piece (&defenders_pieces)[6] = (attacker == ME) ? your_pieces : my_pieces;
+    const Piece (&attackers_pieces)[6] = (attacker == WHITE) ? white_pieces : black_pieces;
+    const Piece (&defenders_pieces)[6] = (attacker == WHITE) ? black_pieces : white_pieces;
 
     std::vector<Move> moves;
 
@@ -144,13 +144,13 @@ std::vector<Move> Board::find_all_moves() const
 void Board::update_scaredness()
 {
     for (int i=0; i < 6; ++i) {
-        my_pieces[i].is_scared = false;
-        your_pieces[i].is_scared = false;
+        white_pieces[i].is_scared = false;
+        black_pieces[i].is_scared = false;
     }
     for (int i=0; i < 6; ++i) {
-        Piece &yours = your_pieces[i];
+        Piece &yours = black_pieces[i];
         for (int j=0; j < 6; ++j) {
-            Piece &mine = my_pieces[j];
+            Piece &mine = white_pieces[j];
             if (!yours.is_adjacent(mine.x, mine.y)) continue;
             if (yours.scares(mine)) {
                 mine.is_scared = true;
@@ -163,7 +163,7 @@ void Board::update_scaredness()
 
 void Board::apply_move(const Move &move)
 {
-    Piece (&attackers_pieces)[6] = (attacker == ME) ? my_pieces : your_pieces;
+    Piece (&attackers_pieces)[6] = (attacker == WHITE) ? white_pieces : black_pieces;
  
     /* Which piece is the one that's moving? */
     Piece *p = NULL;
@@ -171,7 +171,7 @@ void Board::apply_move(const Move &move)
         if (attackers_pieces[i].x == move.from_x && attackers_pieces[i].y == move.from_y) {
             attackers_pieces[i].x = move.to_x;
             attackers_pieces[i].y = move.to_y;
-            this->attacker = ((attacker == ME) ? YOU : ME);
+            this->attacker = ((attacker == WHITE) ? BLACK : WHITE);
             this->update_scaredness();
             return;
         }
@@ -220,28 +220,28 @@ int Board::score() const
     int my_scared = 0, your_scared = 0;
     int my_threats = 0, your_threats = 0;
     for (int i=0; i < 6; ++i) {
-        my_score += my_pieces[i].at(3,3); your_score += your_pieces[i].at(3,3);
-        my_score += my_pieces[i].at(3,6); your_score += your_pieces[i].at(3,6);
-        my_score += my_pieces[i].at(6,3); your_score += your_pieces[i].at(6,3);
-        my_score += my_pieces[i].at(6,6); your_score += your_pieces[i].at(6,6);
-        my_scared += my_pieces[i].is_scared;
-        your_scared += your_pieces[i].is_scared;
-        my_threats += waterholes_threatened_by(my_pieces[i]);
-        your_threats += waterholes_threatened_by(your_pieces[i]);
+        my_score += white_pieces[i].at(3,3); your_score += black_pieces[i].at(3,3);
+        my_score += white_pieces[i].at(3,6); your_score += black_pieces[i].at(3,6);
+        my_score += white_pieces[i].at(6,3); your_score += black_pieces[i].at(6,3);
+        my_score += white_pieces[i].at(6,6); your_score += black_pieces[i].at(6,6);
+        my_scared += white_pieces[i].is_scared;
+        your_scared += black_pieces[i].is_scared;
+        my_threats += waterholes_threatened_by(white_pieces[i]);
+        your_threats += waterholes_threatened_by(black_pieces[i]);
     }
     assert(my_score + your_score <= 4);
     assert(my_score <= 3);
     assert(your_score <= 3);
     
-    if (my_score == 3) { assert(attacker == YOU); return +9999; }
-    if (your_score == 3) { assert(attacker == ME); return +9999; }
+    if (my_score == 3) { assert(attacker == BLACK); return +9999; }
+    if (your_score == 3) { assert(attacker == WHITE); return +9999; }
 
     my_score = 10*my_score + my_threats + your_scared;
     your_score = 10*your_score + your_threats + my_scared;
 
     int my_advantage = (my_score - your_score);
     
-    return (attacker == ME) ? -my_advantage : +my_advantage;
+    return (attacker == WHITE) ? -my_advantage : +my_advantage;
 }
 
 static int usec_difference(struct timeval a, struct timeval b)
@@ -295,9 +295,9 @@ static char piece2char(Player who, const Piece &p)
     if (p.is_scared) return '!';
     switch (p.type)
     {
-        case MOUSE: return (who == ME ? 'M' : 'm');
-        case LION: return (who == ME ? 'L' : 'l');
-        case ELEPHANT: return (who == ME ? 'E' : 'e');
+        case MOUSE: return (who == WHITE ? 'M' : 'm');
+        case LION: return (who == WHITE ? 'L' : 'l');
+        case ELEPHANT: return (who == WHITE ? 'E' : 'e');
         default: assert(false);
     }
 }
@@ -307,8 +307,8 @@ std::string Board::str() const
     char board[10][10];
     memset(board, '.', sizeof board);
     for (int i=0; i < 6; ++i) {
-        board[my_pieces[i].x][my_pieces[i].y] = piece2char(ME, my_pieces[i]);
-        board[your_pieces[i].x][your_pieces[i].y] = piece2char(YOU, your_pieces[i]);
+        board[white_pieces[i].x][white_pieces[i].y] = piece2char(WHITE, white_pieces[i]);
+        board[black_pieces[i].x][black_pieces[i].y] = piece2char(BLACK, black_pieces[i]);
     }
 
     std::string result;

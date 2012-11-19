@@ -7,10 +7,10 @@
 #include "ImageFmtc.h"
 #include "Board.h"
 
-Board process_image(unsigned char (*im)[3], int w, int h);
+Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle);
 extern "C" int ReadPNG(const char *fname, unsigned char (**data)[3], int *w, int *h);
 
-void get_game(Board &board)
+void get_game(Board &board, bool &found_red_circle)
 {
     unsigned char (*im)[3];
     int w, h, rc;
@@ -24,11 +24,14 @@ void get_game(Board &board)
         printf("Error %d reading /tmp/jorina.png!\n", rc);
         exit(1);
     }
-    board = process_image(im, w, h);
+    board = process_image(im, w, h, found_red_circle);
     free(im);
 }
 
 static std::set<std::string> seen_it;
+
+/* Right now, we play just the white (South) side. */
+#define MOVE_FOR(x) ((x) == WHITE)
 
 int main()
 {
@@ -45,7 +48,11 @@ int main()
     while (true) {
         Board board;
         try {
-            get_game(board);  /* This might throw. */
+            bool found_red_circle = false;
+            get_game(board, found_red_circle);  /* This might throw. */
+            if (found_red_circle) {
+                assert(!MOVE_FOR(board.attacker));
+            }
         } catch (const char *err) {
             puts("Failed to get a valid board image.");
             printf("Reason provided was: \"%s\"\n", err);
@@ -71,7 +78,10 @@ int main()
                 continue;
             }
             FILE *fp = fopen("/tmp/barca.log", "a");
-            if (board.attacker == ME) {
+            if (MOVE_FOR(BLACK) == MOVE_FOR(WHITE)) {
+                printf("%s won!\n", (board.attacker == WHITE) ? "White" : "Black");
+                fprintf(fp, "%s %3d moves\n", (board.attacker == WHITE) ? "WHITE" : "BLACK", turns);
+            } else if (MOVE_FOR(board.attacker)) {
                 puts("I lost!");
                 fprintf(fp, "LOST! %3d moves\n", turns);
                 assert(!expecting_to_win);
@@ -92,7 +102,7 @@ int main()
 
         assert(!expecting_to_win);
 
-        if (board.attacker != ME) {
+        if (!MOVE_FOR(board.attacker)) {
             puts("Attacker is not ME, so I'm going back to sleep for a while.");
             usleep(500*1000);
             continue;

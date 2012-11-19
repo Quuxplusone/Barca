@@ -162,7 +162,7 @@ static bool board_has_crowns(unsigned char (*im)[3], int w, int h,
             if (weight == 0) continue;
 
             if (square_crowned(im,w,h, sx,sy)) {
-                board.attacker = (weight < 500) ? YOU : ME;
+                board.attacker = (weight < 500) ? BLACK : WHITE;
                 return true;
             }
         }
@@ -171,8 +171,10 @@ static bool board_has_crowns(unsigned char (*im)[3], int w, int h,
 }
 
 
-Board process_image(unsigned char (*im)[3], int w, int h)
+Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle)
 {
+    found_red_circle = false;
+
     /* Find connected regions of the same color; then discard
      * any regions of area less than 50. */
     UnionFind uf(w*h);
@@ -233,8 +235,8 @@ Board process_image(unsigned char (*im)[3], int w, int h)
     assert(board.bottom == board.top + 9*47);
 
     /* Identify the positions of all the pieces. */
-    int mine_found = 0;
-    int yours_found = 0;
+    int white_found = 0;
+    int black_found = 0;
     bool found_attacker = false;
     for (int x=0; x < 10; ++x) {
         for (int y=0; y < 10; ++y) {
@@ -248,25 +250,26 @@ Board process_image(unsigned char (*im)[3], int w, int h)
                 found_attacker = true;
             } else if (has_colored_circle(im,w,h, sx,sy, 0xFF3300)) {
                 printf("Found red circle at square %d,%d\n", x,y);
-                /* If we're not expected to make a move, just bail and sleep. */
-                throw "it's the Flash AI's turn";
+                att = &board.attacker;
+                found_attacker = true;
+                found_red_circle = true;  /* we're not expecting to move */
             }
             switch (int weight = square_weight(im,w,h, sx,sy)) {
-                case 240: board.my_pieces[mine_found++] = Piece(LION, x,y); *att = ME; break;
-                case 359 ... 375: board.my_pieces[mine_found++] = Piece(ELEPHANT, x,y); *att = ME; break;
-                case 215 ... 235: board.my_pieces[mine_found++] = Piece(MOUSE, x,y); *att = ME; break;
-                case 780: board.your_pieces[yours_found++] = Piece(LION, x,y); *att = YOU; break;
-                case 644 ... 645: board.your_pieces[yours_found++] = Piece(ELEPHANT, x,y); *att = YOU; break;
-                case 953: board.your_pieces[yours_found++] = Piece(MOUSE, x,y); *att = YOU; break;
+                case 240: board.white_pieces[white_found++] = Piece(LION, x,y); *att = WHITE; break;
+                case 359 ... 375: board.white_pieces[white_found++] = Piece(ELEPHANT, x,y); *att = WHITE; break;
+                case 215 ... 235: board.white_pieces[white_found++] = Piece(MOUSE, x,y); *att = WHITE; break;
+                case 780: board.black_pieces[black_found++] = Piece(LION, x,y); *att = BLACK; break;
+                case 644 ... 645: board.black_pieces[black_found++] = Piece(ELEPHANT, x,y); *att = BLACK; break;
+                case 953: board.black_pieces[black_found++] = Piece(MOUSE, x,y); *att = BLACK; break;
                 case 0: /* empty square */ break;
                 default: printf("Unrecognized weight %d at (%d,%d), might be a mouse cursor\n", weight, x,y); break;
             }
         }
     }
-    if (mine_found != 6) {
-        throw "Found fewer than 6 of my (white) pieces";
-    } else if (yours_found != 6) {
-        throw "Found fewer than 6 of your (black) pieces";
+    if (white_found != 6) {
+        throw "Found fewer than 6 white pieces";
+    } else if (black_found != 6) {
+        throw "Found fewer than 6 black pieces";
     }
     board.update_scaredness();
     if (!found_attacker) {

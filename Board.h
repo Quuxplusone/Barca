@@ -6,7 +6,7 @@
 #include <vector>
 
 enum Player {
-    ME, YOU
+    BLACK, WHITE
 };
 
 enum Species {
@@ -41,8 +41,8 @@ struct Move {
 };
 
 struct Board {
-    Piece my_pieces[6];
-    Piece your_pieces[6];
+    Piece white_pieces[6];
+    Piece black_pieces[6];
     Player attacker;
     
     int left, right, top, bottom;  /* UI screen measurements */
