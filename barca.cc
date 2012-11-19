@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <set>
 #include <string>
@@ -30,11 +31,23 @@ void get_game(Board &board, bool &found_red_circle)
 
 static std::set<std::string> seen_it;
 
-/* Right now, we play just the white (South) side. */
-#define MOVE_FOR(x) ((x) == WHITE)
-
-int main()
+int main(int argc, char **argv)
 {
+    bool play_for[WHITE+1] = {};
+    for (int i=1; i < argc; ++i) {
+        if (strcmp(argv[i], "--white") == 0) {
+            play_for[WHITE] = true;
+        } else if (strcmp(argv[i], "--black") == 0) {
+            play_for[BLACK] = true;
+        } else {
+            printf("Invalid option '%s'.\n", argv[i]);
+            puts("Valid options are: --black, --white.");
+        }
+    }
+    if (!play_for[BLACK] && !play_for[WHITE]) {
+        puts("You didn't specify --black or --white, so I'll just watch this game.\n");
+    }
+
     printf("3...\n");
     usleep(1000*1000);
     printf("2...\n");
@@ -51,7 +64,7 @@ int main()
             bool found_red_circle = false;
             get_game(board, found_red_circle);  /* This might throw. */
             if (found_red_circle) {
-                assert(!MOVE_FOR(board.attacker));
+                assert(!play_for[board.attacker]);
             }
         } catch (const char *err) {
             puts("Failed to get a valid board image.");
@@ -78,10 +91,10 @@ int main()
                 continue;
             }
             FILE *fp = fopen("/tmp/barca.log", "a");
-            if (MOVE_FOR(BLACK) == MOVE_FOR(WHITE)) {
+            if (play_for[BLACK] == play_for[WHITE]) {
                 printf("%s won!\n", (board.attacker == WHITE) ? "White" : "Black");
                 fprintf(fp, "%s %3d moves\n", (board.attacker == WHITE) ? "WHITE" : "BLACK", turns);
-            } else if (MOVE_FOR(board.attacker)) {
+            } else if (play_for[board.attacker]) {
                 puts("I lost!");
                 fprintf(fp, "LOST! %3d moves\n", turns);
                 assert(!expecting_to_win);
@@ -102,7 +115,7 @@ int main()
 
         assert(!expecting_to_win);
 
-        if (!MOVE_FOR(board.attacker)) {
+        if (!play_for[board.attacker]) {
             puts("Attacker is not ME, so I'm going back to sleep for a while.");
             usleep(500*1000);
             continue;
