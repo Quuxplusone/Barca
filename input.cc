@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -85,17 +86,25 @@ void PixelRegion::analyze()
     assert(pixels.size() == pop);
     double ci = 0.0;
     double cj = 0.0;
+    int xmin = INT_MAX, ymin = INT_MAX;
+    int xmax = INT_MIN, ymax = INT_MIN;
     for (int i=0; i < (int)pixels.size(); ++i) {
         ci += pixels[i].i;
         cj += pixels[i].j;
+        if (pixels[i].i < xmin) xmin = pixels[i].i;
+        else if (pixels[i].i > xmax) xmax = pixels[i].i;
+        if (pixels[i].j < ymin) ymin = pixels[i].j;
+        else if (pixels[i].j > ymax) ymax = pixels[i].j;
     }
     ci /= pop;
     cj /= pop;
     assert(ci >= 0 && cj >= 0);
     cx = ci;
     cy = cj;
-    if (pop == 47*47) {
+    if (xmax == xmin+46 && ymax == ymin+46 && pop > 40*20) {
         is_square = true;
+        cx = (xmax + xmin) / 2;
+        cy = (ymax + ymin) / 2;
     }
 }
 
@@ -191,7 +200,7 @@ Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle
         for (int i=0; i < w; ++i) {
             int n = j*w+i;
             int pn = uf.findparent(n);
-            if (uf.pop[pn] < 47*45) {
+            if (uf.pop[pn] < 47*20) {
                 /* do nothing with this tiny region */
             } else {
                 if (pn == n)
@@ -231,9 +240,14 @@ Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle
         if (squares[i]->cy < board.top) board.top = squares[i]->cy;
         else if (squares[i]->cy > board.bottom) board.bottom = squares[i]->cy;
     }
-    assert(board.right == board.left + 9*47);
-    assert(board.bottom == board.top + 9*47);
-
+    if ((board.right != board.left + 9*47) ||
+        (board.bottom != board.top + 9*47))
+    {
+        printf("board.left = %d, board.right = %d\n", board.left, board.right);
+        printf("board.top = %d, board.bottom = %d\n", board.top, board.bottom);
+        throw "board was the wrong size";
+    }
+    
     /* Identify the positions of all the pieces. */
     int white_found = 0;
     int black_found = 0;
@@ -252,11 +266,18 @@ Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle
                 printf("Found red circle at square %d,%d\n", x,y);
                 att = &board.attacker;
                 found_attacker = true;
-                found_red_circle = true;  /* we're not expecting to move */
+                found_red_circle = true;  /* We're not expecting to move;
+                                           * the Flash AI is thinking. */
+            } else if (has_colored_circle(im,w,h, sx,sy, 0x40FF40)) {
+                printf("Found bright green circle at square %d,%d\n", x,y);
+                att = &board.attacker;
+                found_attacker = true;
+                found_red_circle = true;  /* We're not expecting to move; the
+                                           * human is in the middle of a move. */
             }
             switch (int weight = square_weight(im,w,h, sx,sy)) {
-                case 240: board.white_pieces[white_found++] = Piece(LION, x,y); *att = WHITE; break;
-                case 359 ... 375: board.white_pieces[white_found++] = Piece(ELEPHANT, x,y); *att = WHITE; break;
+                case 236 ... 240: board.white_pieces[white_found++] = Piece(LION, x,y); *att = WHITE; break;
+                case 356 ... 375: board.white_pieces[white_found++] = Piece(ELEPHANT, x,y); *att = WHITE; break;
                 case 215 ... 235: board.white_pieces[white_found++] = Piece(MOUSE, x,y); *att = WHITE; break;
                 case 780: board.black_pieces[black_found++] = Piece(LION, x,y); *att = BLACK; break;
                 case 644 ... 645: board.black_pieces[black_found++] = Piece(ELEPHANT, x,y); *att = BLACK; break;
