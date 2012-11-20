@@ -97,7 +97,22 @@ void Board::maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, i
         moves.push_back(Move(p, x,y));
     }
 }
-    
+
+void Board::maybe_append_trapped_move(std::vector<Move> &moves, const Piece &p, int x, int y) const
+{
+    assert(p.is_scared);
+    const Piece (&defenders_pieces)[6] = (attacker == WHITE) ? black_pieces : white_pieces;
+
+    /* Can't move to an occupied space. */
+    for (int i=0; i < 6; ++i) {
+        if (white_pieces[i].at(x,y)) return;
+        if (black_pieces[i].at(x,y)) return;
+    }
+
+    if (clear_line_to(p, x,y)) {
+        moves.push_back(Move(p, x,y));
+    }
+}
 
 std::vector<Move> Board::find_all_moves() const
 {
@@ -111,22 +126,23 @@ std::vector<Move> Board::find_all_moves() const
         return moves;
     }
 
-    for (int x=0; x < 10; ++x) {
-        for (int y=0; y < 10; ++y) {
-            for (int i=0; i < 6; ++i) {
+    for (int i=0; i < 6; ++i) {
+        for (int x=0; x < 10; ++x) {
+            for (int y=0; y < 10; ++y) {
                 maybe_append_move(moves, attackers_pieces[i], x, y);
             }
         }
     }
-    
-    /* If any scared piece can move, then *only* a scared piece may move. */
+
+    /* If any scared piece can move out of danger, then some scared piece
+     * MUST move out of danger this turn. */
     bool a_scared_piece_can_move = false;
     for (int i=0; i < (int)moves.size(); ++i) {
         if (moves[i].was_scared) {
             a_scared_piece_can_move = true;
         }
     }
-    
+
     if (a_scared_piece_can_move) {
         int n = moves.size();
         for (int i=0; i < n; ++i) {
@@ -135,8 +151,20 @@ std::vector<Move> Board::find_all_moves() const
             }
         }
         moves.resize(n);
+    } else {
+        /* If all scared pieces are trapped, then it's okay to
+         * move a trapped piece from one dangerous spot to another;
+         * OR to move any non-trapped piece. */
+        for (int i=0; i < 6; ++i) {
+            if (!attackers_pieces[i].is_scared) continue;
+            for (int x=0; x < 10; ++x) {
+                for (int y=0; y < 10; ++y) {
+                    maybe_append_trapped_move(moves, attackers_pieces[i], x, y);
+                }
+            }
+        }
     }
-    
+
     assert(moves.size() >= 1);
     return moves;
 }
@@ -164,7 +192,7 @@ void Board::update_scaredness()
 void Board::apply_move(const Move &move)
 {
     Piece (&attackers_pieces)[6] = (attacker == WHITE) ? white_pieces : black_pieces;
- 
+
     /* Which piece is the one that's moving? */
     Piece *p = NULL;
     for (int i=0; i < 6; ++i) {
@@ -232,7 +260,7 @@ int Board::score() const
     assert(my_score + your_score <= 4);
     assert(my_score <= 3);
     assert(your_score <= 3);
-    
+
     if (my_score == 3) { assert(attacker == BLACK); return +9999; }
     if (your_score == 3) { assert(attacker == WHITE); return +9999; }
 
@@ -240,7 +268,7 @@ int Board::score() const
     your_score = 10*your_score + your_threats + my_scared;
 
     int my_advantage = (my_score - your_score);
-    
+
     return (attacker == WHITE) ? -my_advantage : +my_advantage;
 }
 
@@ -261,7 +289,7 @@ Move Board::find_best_move() const
     struct timeval start;
     gettimeofday(&start, NULL);
     struct timeval last_iter = start;
-    
+
     for (int ply = 1; ply <= 7; ++ply) {
         if (ply == 2) continue;
 

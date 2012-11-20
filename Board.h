@@ -17,7 +17,7 @@ struct Piece {
     Species type;
     int x, y;
     bool is_scared;
-    
+
     Piece() { }
     Piece(Species s, int x, int y):
         type(s), x(x), y(y), is_scared(false)
@@ -44,7 +44,7 @@ struct Board {
     Piece white_pieces[6];
     Piece black_pieces[6];
     Player attacker;
-    
+
     int left, right, top, bottom;  /* UI screen measurements */
 
     Board();
@@ -61,6 +61,7 @@ struct Board {
 
   private:
     void maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, int y) const;
+    void maybe_append_trapped_move(std::vector<Move> &moves, const Piece &p, int x, int y) const;
     bool clear_line_to(const Piece &p, int ax, int ay) const;
     int waterholes_threatened_by(const Piece &p) const;
 };
