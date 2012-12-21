@@ -1692,26 +1692,6 @@ int RGB2Gray(unsigned char (*rgb)[3], unsigned char **gray, int w, int h)
 }
 
 
-
-
-
-
-struct ColorNode {
-    unsigned char color[3];
-    struct ColorNode *left, *right;
-};
-
-static int cntdelColorNode(struct ColorNode *rt)
-{
-    int cnt = 1;
-    if (rt == NULL) return 0;
-    cnt += cntdelColorNode(rt->left);
-    cnt += cntdelColorNode(rt->right);
-    free(rt);
-    return cnt;
-}
-
-
 /***
  * Functions and structures related to color table manipulation.
  * No optimization here; just a linear search in findColorEntry().
@@ -1800,4 +1780,3 @@ int ReadGenGray(const char *fname, unsigned char **data, int *w, int *h)
     else
       return -4;
 }
-
