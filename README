@@ -10,14 +10,21 @@ Flash game "Barca" (playbarca.com/?page_id=250).
 This program will work only on a system with BOTH of the following
 programs installed and on your path:
 
-    (1) xdotool, for generating clicks programmatically
+    (1) Either "xdotool" (Linux) or
+        Carsten Blüm's "cliclick" (OS X)
 
     (2) Either ImageMagick "import" (Linux) or
-        Apple "screencapture" (OS X)
+        Apple's built-in "screencapture" (OS X)
 
-Also, you'll need libpng (sudo apt-get libpng-dev) in order to
-compile it. Since both libpng and xdotool are hard-to-impossible
-to install on OS X, I'm developing on Ubuntu Linux (11.10, 64-bit).
+Also, you'll need libpng:
+
+    (3) Either "sudo apt-get libpng-dev" (Linux) or
+        download and install XQuartz (OS X)
+
+I've tested this on 64-bit Ubuntu 11.10 and 64-bit OS X 10.8.2.
+If you're deciding between the two of them, note that it's much easier
+to "sudo apt-get install xdotool imagemagick libpng-dev" on Ubuntu
+than to download and run the installers for all the OS X stuff!
 
 To run the bot, open a browser window to playbarca.com/?page_id=250
 (you'll need Flash installed), and then launch "barca --white" in a

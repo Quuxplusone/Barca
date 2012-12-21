@@ -11,7 +11,7 @@
 Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle);
 extern "C" int ReadPNG(const char *fname, unsigned char (**data)[3], int *w, int *h);
 
-void get_game(Board &board, bool &found_red_circle)
+static void get_game(Board &board, bool &found_red_circle)
 {
     unsigned char (*im)[3];
     int w, h, rc;
@@ -27,6 +27,17 @@ void get_game(Board &board, bool &found_red_circle)
     }
     board = process_image(im, w, h, found_red_circle);
     free(im);
+}
+
+static void single_click_at(int x, int y)
+{
+    char cmd[100];
+#ifdef __APPLE__
+    sprintf(cmd, "cliclick m:%d,%d c:.", x, y); system(cmd);
+#else
+    sprintf(cmd, "xdotool mousemove %d %d", x, y); system(cmd);
+    system("xdotool click 1");
+#endif
 }
 
 static std::set<std::string> seen_it;
@@ -54,7 +65,7 @@ int main(int argc, char **argv)
     usleep(1000*1000);
     printf("1...\n");
     usleep(1000*1000);
-    
+
     int failures_in_a_row = 0;
     int turns = 0;
     bool expecting_to_win = false;
@@ -104,7 +115,8 @@ int main(int argc, char **argv)
                 assert(expecting_to_win);
             }
             fclose(fp);
-            system("xdotool click 1");  /* Click to reset. */
+            /* Click to reset. */
+            single_click_at((board.left + board.right)/2, (board.top + board.bottom)/2);
             usleep(1000*1000);
             puts("===============================NEW GAME");
             seen_it.clear();
@@ -138,19 +150,16 @@ int main(int argc, char **argv)
         int y = board.top + (board.bottom - board.top)*(best_move.from_y)/9;
         printf("First click at (%d,%d)\n", x,y);
 
-        char cmd[100];
-        sprintf(cmd, "xdotool mousemove %d %d", x, y); system(cmd);
-        system("xdotool click 1");
+        single_click_at(x,y);
         usleep(100*1000);  /* Let the UI catch up to this click. */
 
         x = board.left + (board.right - board.left)*(best_move.to_x)/9;
         y = board.top + (board.bottom - board.top)*(best_move.to_y)/9;
         printf("Second click at (%d,%d)\n", x,y);
 
-        sprintf(cmd, "xdotool mousemove %d %d", x, y); system(cmd);
-        system("xdotool click 1");
+        single_click_at(x,y);
         usleep(2500*1000);  /* Let the UI catch up to this click. */
-        
+
         board.apply_move(best_move);
         expecting_to_win = (board.score() == +9999);
     }  /* while */
