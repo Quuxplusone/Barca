@@ -101,7 +101,6 @@ void Board::maybe_append_move(std::vector<Move> &moves, const Piece &p, int x, i
 void Board::maybe_append_trapped_move(std::vector<Move> &moves, const Piece &p, int x, int y) const
 {
     assert(p.is_scared);
-    const Piece (&defenders_pieces)[6] = (attacker == WHITE) ? black_pieces : white_pieces;
 
     /* Can't move to an occupied space. */
     for (int i=0; i < 6; ++i) {
@@ -117,7 +116,6 @@ void Board::maybe_append_trapped_move(std::vector<Move> &moves, const Piece &p, 
 std::vector<Move> Board::find_all_moves() const
 {
     const Piece (&attackers_pieces)[6] = (attacker == WHITE) ? white_pieces : black_pieces;
-    const Piece (&defenders_pieces)[6] = (attacker == WHITE) ? black_pieces : white_pieces;
 
     std::vector<Move> moves;
 
@@ -194,7 +192,6 @@ void Board::apply_move(const Move &move)
     Piece (&attackers_pieces)[6] = (attacker == WHITE) ? white_pieces : black_pieces;
 
     /* Which piece is the one that's moving? */
-    Piece *p = NULL;
     for (int i=0; i < 6; ++i) {
         if (attackers_pieces[i].x == move.from_x && attackers_pieces[i].y == move.from_y) {
             attackers_pieces[i].x = move.to_x;
@@ -281,7 +278,6 @@ Move Board::find_best_move() const
 {
     Move bestmove;
     int bestvalue;
-    int ply = 1;  /* how many plies deep to search */
     std::vector<Move> all_moves = this->find_all_moves();
     printf("Found %d moves\n", (int)all_moves.size());
 

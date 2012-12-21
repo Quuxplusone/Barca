@@ -64,7 +64,7 @@ struct Pixel {
 };
 
 struct PixelRegion {
-    int pop;
+    size_t pop;
     unsigned char color[3];
     std::vector<Pixel> pixels;
 
