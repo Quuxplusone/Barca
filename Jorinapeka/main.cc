@@ -40,8 +40,8 @@ int main()
             printf("I think my current score is %d.\n", current_score);
             printf("I think level=%d, moves=%d.\n", current_level, current_moves);
             printf("Here's the board I got:\n");
-            for (int i=0; i < 7; ++i) {
-                for (int j=0; j < 7; ++j) {
+            for (int i=0; i < board.N; ++i) {
+                for (int j=0; j < board.N; ++j) {
                     BoardCircle &bc = board.circles[i][j];
                     char lb = (bc.is_goal_circle ? '[' : ' ');
                     char rb = (bc.is_goal_circle ? ']' : ' ');
@@ -58,8 +58,8 @@ int main()
             Move best_move = board.find_best_move(current_moves);
 
             printf("Best move is (%d,%d)\n", best_move.i, best_move.j);
-            int x = board.left + (board.right - board.left)*(best_move.j)/6;
-            int y = board.top + (board.bottom - board.top)*(best_move.i)/6;
+            int x = board.left + (board.right - board.left)*(best_move.j)/(board.N-1);
+            int y = board.top + (board.bottom - board.top)*(best_move.i)/(board.N-1);
             printf("Click at (%d,%d)\n", x,y);
             single_click_at(x, y);
 
@@ -97,8 +97,8 @@ int main()
             }
 
             /* Sleep while the animation plays.
-             * Let's assume it covers 2 balls per second. */
-            usleep(best_move.distance_traveled*500*1000);
+             * Let's assume it covers 3 balls per second. */
+            usleep(best_move.distance_traveled*300*1000);
 
             if (bonus_screen) {
                 usleep(2000*1000);

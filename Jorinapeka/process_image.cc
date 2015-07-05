@@ -231,11 +231,11 @@ Board process_image(unsigned char (*im)[3], int w, int h)
     }
     WritePPM6("/tmp/circles.ppm", im, w, h);
 
-    /* Identify 49 circles that have roughly the same radius. */
+    /* Identify 49 (or 64) circles that have roughly the same radius. */
     int start_of_run = 0;
     for (int i=0; i < (int)circles.size()-1; ++i) {
         if (circles[i]->radius + 5 < circles[i+1]->radius) {
-            if (i+1 - start_of_run == 49) {
+            if (i+1 - start_of_run == 49 || i+1 - start_of_run == 64) {
                 circles.resize(i+1);
                 break;
             } else {
@@ -243,31 +243,42 @@ Board process_image(unsigned char (*im)[3], int w, int h)
             }
         }
     }
-    if (start_of_run != (int)circles.size() - 49) {
-        printf("The screenshot doesn't have exactly 49 equal-sized circles!\n");
+    int number_of_circles = (int)circles.size() - start_of_run;
+    int N;  // board size
+    if (number_of_circles == 49) {
+        N = 7;
+    } else if (number_of_circles == 64) {
+        N = 8;
+    } else {
+        printf("The screenshot doesn't have exactly 49 or 64 equal-sized circles!\n");
         printf("Try again.\n");
         throw "try again";
     }
 
-    for (int i=0; i < 49; ++i)
+    for (int i=0; i < N*N; ++i)
       circles[i] = circles[i+start_of_run];
-    circles.resize(49);
+    circles.resize(N*N);
 
-    /* Sort the 49 circles by x/y coordinates. */
+    /* Sort the circles by x/y coordinates. */
     std::sort(circles.begin(), circles.end(), PixelRegion::by_xy);
 
     Board board;
-    board.top = circles[0]->center_y;
-    board.left = circles[0]->center_x;
-    board.bottom = circles[48]->center_y;
-    board.right = circles[48]->center_x;
+    board.N = N;
+    board.circles.resize(N);
+    for (int i=0; i < N; ++i) {
+        board.circles[i].resize(N);
+    }
+    board.top = circles.front()->center_y;
+    board.left = circles.front()->center_x;
+    board.bottom = circles.back()->center_y;
+    board.right = circles.back()->center_x;
     board.goals_left = 0;
 
     /* For each circle, decide which direction the arrow is facing,
      * and whether it is a colored goal circle. */
-    for (int i=0; i < 49; ++i) {
+    for (int i=0; i < N*N; ++i) {
         PixelRegion &pr = *circles[i];
-        BoardCircle &bc = board.circles[i/7][i%7];
+        BoardCircle &bc = board.circles[i/N][i%N];
         int cx = pr.center_x;
         int cy = pr.center_y;
         unsigned char mycolor[3];
@@ -304,7 +315,7 @@ Board process_image(unsigned char (*im)[3], int w, int h)
             bc.dir = NONE;
         } else {
             printf("Circle %d=(%d,%d) at pixel (%d,%d) is unintelligible!\n",
-                    i, i/7, i%7, pr.center_x, pr.center_y);
+                    i, i/N, i%N, pr.center_x, pr.center_y);
             printf("Try again.\n");
             throw "try again";
         }

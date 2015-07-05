@@ -1,6 +1,6 @@
+#pragma once
 
-#ifndef H_BOARD
- #define H_BOARD
+#include <vector>
 
 struct Move {
     int i, j;
@@ -31,7 +31,8 @@ struct BoardCircle {
 };
 
 struct Board {
-    BoardCircle circles[7][7];
+    int N;
+    std::vector<std::vector<BoardCircle> > circles;
     int top, bottom, left, right;
     int goals_left;
     Move eval_move(int i, int j);
@@ -40,5 +41,3 @@ struct Board {
     Move find_longest_move() const;
     void refill();
 };
-
-#endif /* H_BOARD */

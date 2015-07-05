@@ -20,7 +20,7 @@ Move Board::eval_move(int i, int j)
     }
     move.score = -1;
     Direction delta = circles[i][j].dir;
-    while (0 <= i && i < 7 && 0 <= j && j < 7 &&
+    while (0 <= i && i < N && 0 <= j && j < N &&
            !circles[i][j].unknown) {
         ++move.distance_traveled;
         if (circles[i][j].vanished) {
@@ -57,13 +57,13 @@ Move Board::eval_move(int i, int j)
     move.extra_moves_earned += (move.balls_vanished > 30);
     move.extra_moves_earned += (move.balls_vanished > 40);
 
-    move.is_hapi = (move.balls_vanished > 49/2);
+    move.is_hapi = (move.balls_vanished > N*N/2);
 
     /* See if we just cleared a full row or column. */
-    for (int k=0; k < 7; ++k) {
+    for (int k=0; k < N; ++k) {
         bool cofu = true;
         bool furo = true;
-        for (int l=0; l < 7; ++l) {
+        for (int l=0; l < N; ++l) {
             if (!circles[k][l].vanished) furo = false;
             if (!circles[l][k].vanished) cofu = false;
         }
@@ -77,8 +77,8 @@ Move Board::find_longest_move() const
 {
     Move bestmove;
     bestmove.illegal = true;
-    for (int oj=0; oj < 7; ++oj) {
-        for (int oi=0; oi < 7; ++oi) {
+    for (int oj=0; oj < N; ++oj) {
+        for (int oi=0; oi < N; ++oi) {
             int j = oj, i = oi;
             Board temp = *this;
             Move move = temp.eval_move(oi, oj);
@@ -95,8 +95,8 @@ Move Board::find_goaliest_move() const
     Move bestmove;
     bestmove.illegal = true;
     bestmove.goals_hit = -1;
-    for (int oj=0; oj < 7; ++oj) {
-        for (int oi=0; oi < 7; ++oi) {
+    for (int oj=0; oj < N; ++oj) {
+        for (int oi=0; oi < N; ++oi) {
             int j = oj, i = oi;
             Board temp = *this;
             Move move = temp.eval_move(oi, oj);
@@ -114,8 +114,8 @@ Move Board::find_best_move(int moves_left) const
     Move bestmove;
     bestmove.illegal = true;
     int bestlen = 0;
-    for (int oj=0; oj < 7; ++oj) {
-        for (int oi=0; oi < 7; ++oi) {
+    for (int oj=0; oj < N; ++oj) {
+        for (int oi=0; oi < N; ++oi) {
             int j = oj, i = oi;
             Board temp = *this;
             Move move = temp.eval_move(oi, oj);
@@ -169,8 +169,8 @@ printf("%d,%d curlen=%d\n", oi, oj, curlen);
 
 void Board::refill()
 {
-    for (int j=0; j < 7; ++j) {
-        for (int i=6; i >= 0; --i) {
+    for (int j=0; j < N; ++j) {
+        for (int i = N-1; i >= 0; --i) {
             if (circles[i][j].vanished) {
                 /* Scan up, grab the first unvanished ball, and drag it down. */
                 int d = i-1;
