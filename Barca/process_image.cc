@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 #include "Board.h"
+#include "process_image.h"
 
 struct UnionFind {
     int *nodes, *pop;
@@ -180,9 +181,9 @@ static bool board_has_crowns(unsigned char (*im)[3], int w, int h,
 }
 
 
-Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle)
+Board process_image(unsigned char (*im)[3], int w, int h)
 {
-    found_red_circle = false;
+    bool found_red_circle = false;
 
     /* Find connected regions of the same color; then discard
      * any regions of area less than 50. */
@@ -300,6 +301,10 @@ Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle
         } else {
             throw "Neither side seems to be the attacker yet";
         }
+    }
+
+    if (found_red_circle) {
+        throw opponent_is_thinking();
     }
 
     return board;

@@ -1,6 +1,4 @@
-
-#ifndef H_BOARD
- #define H_BOARD
+#pragma once
 
 #include <string>
 #include <vector>
@@ -65,5 +63,3 @@ struct Board {
     bool clear_line_to(const Piece &p, int ax, int ay) const;
     int waterholes_threatened_by(const Piece &p) const;
 };
-
-#endif /* H_BOARD */

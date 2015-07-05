@@ -27,8 +27,8 @@ to "sudo apt-get install xdotool imagemagick libpng-dev" on Ubuntu
 than to download and run the installers for all the OS X stuff!
 
 To run the bot, open a browser window to playbarca.com/?page_id=250
-(you'll need Flash installed), and then launch "barca --white" in a
-separate terminal window. "barca" will use ImageMagick to screenshot
+(you'll need Flash installed), and then launch "play_barca --white" in a
+separate terminal window. "play_barca" will use ImageMagick to screenshot
 the Flash game to a PNG file in /tmp; read in that PNG file and compute
 the proper move; and then use xdotool to generate the appropriate click
 events. It will do this in a loop every second or two, clicking
@@ -40,7 +40,7 @@ against yourself by changing the Flash game's black player from
 "robot" to "human" and running this with "barca --black".
 
 You can also play this AI against itself (which will probably go on
-forever with no winner) by running "barca --black --white".
+forever with no winner) by running "play_barca --black --white".
 
 This bot is not endorsed by playbarca.com nor SparkWorkz.
 For entertainment purposes only.

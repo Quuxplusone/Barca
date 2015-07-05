@@ -6,38 +6,17 @@
 #include <set>
 #include <string>
 #include "ImageFmtc.h"
+#include "Interact.h"
+#include "SimplePng.h"
+
 #include "Board.h"
+#include "process_image.h"
 
-Board process_image(unsigned char (*im)[3], int w, int h, bool &found_red_circle);
-extern "C" int ReadPNG(const char *fname, unsigned char (**data)[3], int *w, int *h);
-
-static void get_game(Board &board, bool &found_red_circle)
+void get_game(Board &board)
 {
-    unsigned char (*im)[3];
-    int w, h, rc;
-#ifdef __APPLE__
-    system("screencapture /tmp/jorina.png");
-#else
-    system("import -window root /tmp/jorina.png");
-#endif
-    rc = ReadPNG("/tmp/jorina.png", &im, &w, &h);
-    if (rc != 0) {
-        printf("Error %d reading /tmp/jorina.png!\n", rc);
-        exit(1);
-    }
-    board = process_image(im, w, h, found_red_circle);
-    free(im);
-}
-
-static void single_click_at(int x, int y)
-{
-    char cmd[100];
-#ifdef __APPLE__
-    sprintf(cmd, "cliclick m:%d,%d c:.", x, y); system(cmd);
-#else
-    sprintf(cmd, "xdotool mousemove %d %d", x, y); system(cmd);
-    system("xdotool click 1");
-#endif
+    Image img;
+    get_screenshot(img);
+    board = process_image(img.im, img.w, img.h);
 }
 
 static std::set<std::string> seen_it;
@@ -72,11 +51,9 @@ int main(int argc, char **argv)
     while (true) {
         Board board;
         try {
-            bool found_red_circle = false;
-            get_game(board, found_red_circle);  /* This might throw. */
-            if (found_red_circle) {
-                assert(!play_for[board.attacker]);
-            }
+            get_game(board);  /* This might throw. */
+        } catch (const opponent_is_thinking&) {
+            assert(!play_for[board.attacker]);
         } catch (const char *err) {
             puts("Failed to get a valid board image.");
             printf("Reason provided was: \"%s\"\n", err);
