@@ -134,10 +134,12 @@ int WritePNG(const char *fname, unsigned char (*data)[3], int w, int h)
 
     png_write_end(png_ptr, NULL);
     png_destroy_write_struct(&png_ptr, &info_ptr);
+    fclose(fp);
     return 0;
 
 err_png:
     if (row_pointers) png_free(png_ptr, row_pointers);
     png_destroy_write_struct(&png_ptr, &info_ptr);
+    fclose(fp);
     return -2;
 }
